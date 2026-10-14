@@ -1,5 +1,22 @@
 package com.pearparinya.directorai
 
+
+import android.app.AlertDialog
+import android.app.DownloadManager
+import android.os.Environment
+import android.os.Handler
+import android.os.Looper
+import org.json.JSONArray
+import java.io.BufferedReader
+import java.io.InputStreamReader
+import java.net.HttpURLConnection
+import java.net.URL
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import java.util.TimeZone
+import java.util.concurrent.Executors
+
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -124,6 +141,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        checkForAutoUpdateFromGitHub(true)
 
         val scroll = ScrollView(this).apply { setBackgroundColor(navy) }
         val root = LinearLayout(this).apply {
@@ -1103,5 +1121,82 @@ Natural realistic human movement, subtle breathing, authentic facial expressions
         val view = currentFocus ?: return
         val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
         imm.hideSoftInputFromWindow(view.windowToken, 0)
+    }
+
+    // === ระบบ AUTO-UPDATE จาก GitHub Releases ===
+    private fun checkForAutoUpdateFromGitHub(isAutoCheck: Boolean = true) {
+        Executors.newSingleThreadExecutor().execute {
+            try {
+                val url = URL("https://api.github.com/repos/pearparinya/director-ai/releases")
+                val conn = (url.openConnection() as HttpURLConnection).apply {
+                    requestMethod = "GET"
+                    setRequestProperty("Accept", "application/vnd.github.v3+json")
+                    setRequestProperty("User-Agent", "DirectorAI-Updater")
+                    connectTimeout = 10000
+                    readTimeout = 10000
+                }
+                if (conn.responseCode == 200) {
+                    val response = BufferedReader(InputStreamReader(conn.inputStream)).use { it.readText() }
+                    val releases = JSONArray(response)
+                    if (releases.length() > 0) {
+                        val latest = releases.getJSONObject(0)
+                        val releaseName = latest.optString("name", latest.optString("tag_name", "เวอร์ชันใหม่"))
+                        val assets = latest.optJSONArray("assets")
+                        var downloadUrl = ""
+                        var updatedAt = ""
+                        var assetId = 0L
+                        if (assets != null) {
+                            for (i in 0 until assets.length()) {
+                                val a = assets.getJSONObject(i)
+                                if (a.optString("name", "").endsWith(".apk", ignoreCase = true)) {
+                                    downloadUrl = a.optString("browser_download_url", "")
+                                    updatedAt = a.optString("updated_at", "")
+                                    assetId = a.optLong("id", 0L)
+                                    break
+                                }
+                            }
+                        }
+                        if (downloadUrl.isNotEmpty() && updatedAt.isNotEmpty()) {
+                            val sdf = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US).apply {
+                                timeZone = TimeZone.getTimeZone("UTC")
+                            }
+                            val remoteTime = sdf.parse(updatedAt)?.time ?: 0L
+                            val localTime = packageManager.getPackageInfo(packageName, 0).lastUpdateTime
+                            val prefs = getSharedPreferences("DirectorAIUpdatePrefs", android.content.Context.MODE_PRIVATE)
+                            val ignoredId = prefs.getLong("ignored_asset_id", -1L)
+
+                            if (remoteTime > (localTime + 30000L) && (!isAutoCheck || assetId != ignoredId)) {
+                                val thFormat = SimpleDateFormat("dd/MM/yyyy HH:mm น.", Locale("th", "TH")).apply {
+                                    timeZone = TimeZone.getTimeZone("Asia/Bangkok")
+                                }
+                                val timeStr = thFormat.format(Date(remoteTime))
+                                Handler(Looper.getMainLooper()).post {
+                                    AlertDialog.Builder(this@MainActivity)
+                                        .setTitle("🚀 พบอัปเดตใหม่บน GitHub!")
+                                        .setMessage("ตรวจพบแอปเวอร์ชันใหม่พร้อมใช้งาน:\n\n📦 รุ่น: $releaseName\n🕒 บิลด์เมื่อ: $timeStr\n\nกด 'อัปเดตเลย' เพื่อดาวน์โหลดและติดตั้งทับได้ทันที")
+                                        .setCancelable(false)
+                                        .setPositiveButton("⬇️ อัปเดตเลย") { _, _ ->
+                                            try {
+                                                val req = DownloadManager.Request(android.net.Uri.parse(downloadUrl)).apply {
+                                                    setTitle("กำลังอัปเดต Director AI")
+                                                    setDescription("กำลังดาวน์โหลด DIRECTOR-AI-1.0.apk...")
+                                                    setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+                                                    setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, "DIRECTOR-AI-1.0.apk")
+                                                }
+                                                (getSystemService(android.content.Context.DOWNLOAD_SERVICE) as DownloadManager).enqueue(req)
+                                                startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(downloadUrl)))
+                                            } catch (_: Exception) {}
+                                        }
+                                        .setNeutralButton("ไว้ทีหลัง") { _, _ ->
+                                            prefs.edit().putLong("ignored_asset_id", assetId).apply()
+                                        }
+                                        .show()
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch (_: Exception) {}
+        }
     }
 }
