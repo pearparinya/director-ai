@@ -94,100 +94,9 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // === ระบบ AUTO-UPDATE จาก GitHub Releases ===
-    private fun checkForAutoUpdateFromGitHub(isAutoCheck: Boolean = true) {
-        java.util.concurrent.Executors.newSingleThreadExecutor().execute {
-            try {
-                val url = java.net.URL("https://api.github.com/repos/pearparinya/director-ai/releases")
-                val conn = (url.openConnection() as java.net.HttpURLConnection).apply {
-                    requestMethod = "GET"
-                    setRequestProperty("Accept", "application/vnd.github.v3+json")
-                    setRequestProperty("User-Agent", "DirectorAI-Updater")
-                    connectTimeout = 10000
-                    readTimeout = 10000
-                }
-                if (conn.responseCode == 200) {
-                    val reader = java.io.BufferedReader(java.io.InputStreamReader(conn.inputStream))
-                    val sb = java.lang.StringBuilder()
-                    var line: String?
-                    while (reader.readLine().also { line = it } != null) {
-                        sb.append(line)
-                    }
-                    reader.close()
-
-                    val releases = org.json.JSONArray(sb.toString())
-                    if (releases.length() > 0) {
-                        val latest = releases.getJSONObject(0)
-                        val releaseName = latest.optString("name", latest.optString("tag_name", "เวอร์ชันใหม่"))
-                        val assets = latest.optJSONArray("assets")
-                        var downloadUrl = ""
-                        var updatedAt = ""
-                        var assetId = 0L
-                        if (assets != null) {
-                            for (i in 0 until assets.length()) {
-                                val a = assets.getJSONObject(i)
-                                if (a.optString("name", "").endsWith(".apk", ignoreCase = true)) {
-                                    downloadUrl = a.optString("browser_download_url", "")
-                                    updatedAt = a.optString("updated_at", "")
-                                    assetId = a.optLong("id", 0L)
-                                    break
-                                }
-                            }
-                        }
-                        if (downloadUrl.isNotEmpty() && updatedAt.isNotEmpty()) {
-                            val sdf = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", java.util.Locale.US).apply {
-                                timeZone = java.util.TimeZone.getTimeZone("UTC")
-                            }
-                            val remoteTime = sdf.parse(updatedAt)?.time ?: 0L
-                            val localTime = packageManager.getPackageInfo(packageName, 0).lastUpdateTime
-                            val prefs = getSharedPreferences("DirectorAIUpdatePrefs", android.content.Context.MODE_PRIVATE)
-                            val ignoredId = prefs.getLong("ignored_asset_id", -1L)
-
-                            if (remoteTime > (localTime + 30000L) && (!isAutoCheck || assetId != ignoredId)) {
-                                val thFormat = java.text.SimpleDateFormat("dd/MM/yyyy HH:mm น.", java.util.Locale("th", "TH")).apply {
-                                    timeZone = java.util.TimeZone.getTimeZone("Asia/Bangkok")
-                                }
-                                val timeStr = thFormat.format(java.util.Date(remoteTime))
-                                runOnUiThread {
-                                    android.app.AlertDialog.Builder(this@MainActivity)
-                                        .setTitle("🚀 พบอัปเดตใหม่บน GitHub!")
-                                        .setMessage("ตรวจพบแอปเวอร์ชันใหม่พร้อมใช้งาน:
-
-📦 รุ่น: " + releaseName + "
-🕒 บิลด์เมื่อ: " + timeStr + "
-
-กด 'อัปเดตเลย' เพื่อดาวน์โหลดและติดตั้งทับได้ทันที")
-                                        .setCancelable(false)
-                                        .setPositiveButton("⬇️ อัปเดตเลย") { _, _ ->
-                                            try {
-                                                val req = android.app.DownloadManager.Request(android.net.Uri.parse(downloadUrl)).apply {
-                                                    setTitle("กำลังอัปเดต Director AI")
-                                                    setDescription("กำลังดาวน์โหลด DIRECTOR-AI-1.0.apk...")
-                                                    setNotificationVisibility(android.app.DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
-                                                    setDestinationInExternalPublicDir(android.os.Environment.DIRECTORY_DOWNLOADS, "DIRECTOR-AI-1.0.apk")
-                                                }
-                                                (getSystemService(android.content.Context.DOWNLOAD_SERVICE) as android.app.DownloadManager).enqueue(req)
-                                                startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(downloadUrl)))
-                                            } catch (_: Exception) {}
-                                        }
-                                        .setNeutralButton("ไว้ทีหลัง") { _, _ ->
-                                            prefs.edit().putLong("ignored_asset_id", assetId).apply()
-                                        }
-                                        .show()
-                                }
-                            }
-                        }
-                    }
-                }
-            } catch (_: Exception) {}
-        }
-    }
-
-
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        checkForAutoUpdateFromGitHub(true)
+        checkForAutoUpdateFromGitHub(this)
 
         val scroll = ScrollView(this).apply { setBackgroundColor(navy) }
         val root = LinearLayout(this).apply {
@@ -1010,4 +919,79 @@ Natural realistic human movement, subtle breathing, authentic facial expressions
         val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
         imm.hideSoftInputFromWindow(view.windowToken, 0)
     }
+}
+
+
+fun checkForAutoUpdateFromGitHub(activity: android.app.Activity) {
+    Thread {
+        try {
+            val apiUrl = "https://api.github.com/repos/pearparinya/director-ai/releases?t=" + System.currentTimeMillis()
+            val conn = java.net.URL(apiUrl).openConnection() as java.net.HttpURLConnection
+            conn.requestMethod = "GET"
+            conn.setRequestProperty("Accept", "application/vnd.github.v3+json")
+            conn.setRequestProperty("User-Agent", "DirectorAI-Updater")
+            conn.connectTimeout = 10000
+            conn.readTimeout = 10000
+            if (conn.responseCode == 200) {
+                val response = conn.inputStream.bufferedReader().use { it.readText() }
+                val releases = org.json.JSONArray(response)
+                if (releases.length() > 0) {
+                    val latest = releases.getJSONObject(0)
+                    val releaseTitle = latest.optString("name", latest.optString("tag_name", "DIRECTOR AI"))
+                    val assets = latest.optJSONArray("assets")
+                    var downloadUrl = ""
+                    var updatedAt = ""
+                    var assetId = 0L
+                    if (assets != null) {
+                        for (i in 0 until assets.length()) {
+                            val a = assets.getJSONObject(i)
+                            if (a.optString("name", "").endsWith(".apk", ignoreCase = true)) {
+                                downloadUrl = a.optString("browser_download_url", "")
+                                updatedAt = a.optString("updated_at", "")
+                                assetId = a.optLong("id", 0L)
+                                break
+                            }
+                        }
+                    }
+                    if (downloadUrl.isNotEmpty() && updatedAt.isNotEmpty()) {
+                        val sdf = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", java.util.Locale.US)
+                        sdf.timeZone = java.util.TimeZone.getTimeZone("UTC")
+                        val remoteTime = sdf.parse(updatedAt)?.time ?: 0L
+                        val localTime = activity.packageManager.getPackageInfo(activity.packageName, 0).lastUpdateTime
+                        val prefs = activity.getSharedPreferences("DirectorAIAutoUpdate", android.content.Context.MODE_PRIVATE)
+                        val ignoredId = prefs.getLong("ignored_asset_id", -1L)
+                        if (remoteTime > (localTime + 30000L) && assetId != ignoredId) {
+                            android.os.Handler(android.os.Looper.getMainLooper()).post {
+                                if (!activity.isFinishing) {
+                                    android.app.AlertDialog.Builder(activity)
+                                        .setTitle("🚀 พบอัปเดตใหม่: " + releaseTitle)
+                                        .setMessage("ตรวจพบการแก้ไขโค้ดและบิลด์ APK เวอร์ชันใหม่บน GitHub กดอัปเดตเลยเพื่อดาวน์โหลดและติดตั้งทับได้ทันที")
+                                        .setCancelable(false)
+                                        .setPositiveButton("⬇️ อัปเดตเลย") { _, _ ->
+                                            try {
+                                                val uri = android.net.Uri.parse(downloadUrl)
+                                                val req = android.app.DownloadManager.Request(uri)
+                                                req.setTitle("กำลังอัปเดต Director AI")
+                                                req.setDescription("กำลังดาวน์โหลด DIRECTOR-AI-1.0.apk...")
+                                                req.setNotificationVisibility(android.app.DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+                                                req.setDestinationInExternalPublicDir(android.os.Environment.DIRECTORY_DOWNLOADS, "DIRECTOR-AI-1.0.apk")
+                                                val dm = activity.getSystemService(android.content.Context.DOWNLOAD_SERVICE) as android.app.DownloadManager
+                                                dm.enqueue(req)
+                                                activity.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, uri))
+                                            } catch (e: Exception) {
+                                            }
+                                        }
+                                        .setNeutralButton("ไว้ทีหลัง") { _, _ ->
+                                            prefs.edit().putLong("ignored_asset_id", assetId).apply()
+                                        }
+                                        .show()
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (e: Exception) {
+        }
+    }.start()
 }
