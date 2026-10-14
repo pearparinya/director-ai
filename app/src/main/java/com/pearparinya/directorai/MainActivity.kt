@@ -3,13 +3,18 @@ package com.pearparinya.directorai
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.content.BroadcastReceiver
+import android.content.IntentFilter
 import android.content.Intent
 import android.graphics.Color
 import android.graphics.Typeface
 import android.media.AudioManager
 import android.media.ToneGenerator
+import android.app.DownloadManager
+import android.os.Build
 import android.net.Uri
 import android.os.Bundle
+import android.provider.Settings
 import android.os.Handler
 import android.os.Looper
 import android.view.Gravity
@@ -18,11 +23,17 @@ import android.widget.*
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import java.io.File
+import java.net.HttpURLConnection
+import java.net.URL
+import java.nio.charset.StandardCharsets
 import java.text.SimpleDateFormat
+import java.time.Instant
 import java.util.Date
 import java.util.Locale
+import org.json.JSONArray
 
 class MainActivity : AppCompatActivity() {
 
@@ -36,6 +47,23 @@ class MainActivity : AppCompatActivity() {
     private var shareInProgress = false
     private var lastShareAtMs = 0L
     private var awaitingGeminiReturn = false
+    private var isCheckingForUpdates = false
+    private var pendingUpdateUrl: String? = null
+    private var updateDownloadReceiver: BroadcastReceiver? = null
+
+    private val installPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && packageManager.canRequestPackageInstalls()) {
+            pendingUpdateUrl?.also { url ->
+                pendingUpdateUrl = null
+                downloadAndInstallUpdate(url)
+            }
+        } else {
+            pendingUpdateUrl = null
+            Toast.makeText(this, "กรุณาอนุญาตติดตั้งแอปจากแหล่งนี้", Toast.LENGTH_LONG).show()
+        }
+    }
 
     private lateinit var timeLabel: TextView
     private val clockHandler = Handler(Looper.getMainLooper())
@@ -153,6 +181,20 @@ class MainActivity : AppCompatActivity() {
 
         headerRow.addView(headerText, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
         root.addView(headerRow, full())
+
+        val updateButton = Button(this).apply {
+            text = "🔄 เช็คอัปเดต"
+            textSize = 12f
+            isAllCaps = false
+            setTextColor(Color.BLACK)
+            setTypeface(typeface, Typeface.BOLD)
+            backgroundTintList = android.content.res.ColorStateList.valueOf(gold)
+            setOnClickListener { checkForUpdates(isAutoCheck = false) }
+        }
+        root.addView(LinearLayout(this).apply {
+            gravity = Gravity.END
+            addView(updateButton, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, dp(40)))
+        }, full())
 
         timeLabel = TextView(this).apply {
             textSize = 11f
@@ -310,6 +352,148 @@ class MainActivity : AppCompatActivity() {
         restoreWorkState()
         refreshStepIndicator()
         setContentView(scroll)
+        checkForUpdates(isAutoCheck = true)
+    }
+
+    private data class GithubApkRelease(
+        val downloadUrl: String,
+        val updatedAt: Long,
+        val id: Long
+    )
+
+    private fun checkForUpdates(isAutoCheck: Boolean) {
+        if (isCheckingForUpdates) return
+        isCheckingForUpdates = true
+
+        Thread {
+            try {
+                val release = fetchLatestApkRelease()
+                val installedAt = packageManager.getPackageInfo(packageName, 0).lastUpdateTime
+                val hasUpdate = release.updatedAt > installedAt + 30_000L
+
+                runOnUiThread {
+                    if (isFinishing || isDestroyed) return@runOnUiThread
+                    if (hasUpdate) {
+                        AlertDialog.Builder(this)
+                            .setTitle("🚀 พบอัปเดตใหม่บน GitHub!")
+                            .setMessage("พบไฟล์อัปเดตจาก GitHub Release #${release.id}")
+                            .setPositiveButton("⬇️ อัปเดตเลย") { _, _ ->
+                                prepareUpdateInstall(release.downloadUrl)
+                            }
+                            .setNegativeButton("ไว้ทีหลัง", null)
+                            .show()
+                    } else if (!isAutoCheck) {
+                        Toast.makeText(this, "คุณใช้เวอร์ชันล่าสุดแล้ว", Toast.LENGTH_LONG).show()
+                    }
+                }
+            } catch (exception: Exception) {
+                runOnUiThread {
+                    if (!isAutoCheck && !isFinishing && !isDestroyed) {
+                        AlertDialog.Builder(this)
+                            .setTitle("เช็คอัปเดตไม่สำเร็จ")
+                            .setMessage(exception.localizedMessage ?: "กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ต")
+                            .setPositiveButton("ตกลง", null)
+                            .show()
+                    }
+                }
+            } finally {
+                runOnUiThread { isCheckingForUpdates = false }
+            }
+        }.start()
+    }
+
+    private fun fetchLatestApkRelease(): GithubApkRelease {
+        val connection = URL("https://api.github.com/repos/pearparinya/director-ai/releases")
+            .openConnection() as HttpURLConnection
+        connection.requestMethod = "GET"
+        connection.connectTimeout = 15_000
+        connection.readTimeout = 15_000
+        connection.setRequestProperty("Accept", "application/vnd.github+json")
+        connection.setRequestProperty("User-Agent", "DIRECTOR-AI-Android")
+
+        try {
+            val releases = JSONArray(connection.inputStream.bufferedReader(StandardCharsets.UTF_8).use { it.readText() })
+            val latestRelease = releases.optJSONObject(0)
+                ?: throw IllegalStateException("ไม่พบ GitHub Release")
+            val assets = latestRelease.optJSONArray("assets")
+                ?: throw IllegalStateException("Release นี้ไม่มีไฟล์ดาวน์โหลด")
+            val apkAsset = (0 until assets.length())
+                .mapNotNull { assets.optJSONObject(it) }
+                .firstOrNull { it.optString("name").lowercase(Locale.ROOT).endsWith(".apk") }
+                ?: throw IllegalStateException("ไม่พบไฟล์ APK ใน GitHub Release ล่าสุด")
+
+            return GithubApkRelease(
+                downloadUrl = apkAsset.getString("browser_download_url"),
+                updatedAt = Instant.parse(apkAsset.getString("updated_at")).toEpochMilli(),
+                id = apkAsset.getLong("id")
+            )
+        } finally {
+            connection.disconnect()
+        }
+    }
+
+    private fun prepareUpdateInstall(downloadUrl: String) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && !packageManager.canRequestPackageInstalls()) {
+            pendingUpdateUrl = downloadUrl
+            AlertDialog.Builder(this)
+                .setTitle("ต้องอนุญาตการติดตั้ง")
+                .setMessage("อนุญาตให้ DIRECTOR AI ติดตั้งอัปเดตจากไฟล์ APK")
+                .setPositiveButton("ไปที่การตั้งค่า") { _, _ ->
+                    val settingsIntent = Intent(
+                        Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                        Uri.parse("package:$packageName")
+                    )
+                    installPermissionLauncher.launch(settingsIntent)
+                }
+                .setNegativeButton("ยกเลิก") { _, _ -> pendingUpdateUrl = null }
+                .show()
+            return
+        }
+        downloadAndInstallUpdate(downloadUrl)
+    }
+
+    private fun downloadAndInstallUpdate(downloadUrl: String) {
+        val downloadManager = getSystemService(DOWNLOAD_SERVICE) as DownloadManager
+        val request = DownloadManager.Request(Uri.parse(downloadUrl))
+            .setTitle("DIRECTOR AI update")
+            .setDescription("กำลังดาวน์โหลด DIRECTOR-AI-1.0.apk")
+            .setMimeType("application/vnd.android.package-archive")
+            .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+            .setDestinationInExternalFilesDir(this, null, "DIRECTOR-AI-1.0.apk")
+        val downloadId = downloadManager.enqueue(request)
+
+        updateDownloadReceiver?.let { runCatching { unregisterReceiver(it) } }
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context, intent: Intent) {
+                if (intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1L) != downloadId) return
+                updateDownloadReceiver?.let { runCatching { unregisterReceiver(it) } }
+                updateDownloadReceiver = null
+
+                val apkUri = downloadManager.getUriForDownloadedFile(downloadId)
+                if (apkUri == null) {
+                    Toast.makeText(this@MainActivity, "ดาวน์โหลด APK ไม่สำเร็จ", Toast.LENGTH_LONG).show()
+                    return
+                }
+
+                val installIntent = Intent(Intent.ACTION_VIEW).apply {
+                    setDataAndType(apkUri, "application/vnd.android.package-archive")
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                try {
+                    startActivity(installIntent)
+                } catch (_: Exception) {
+                    Toast.makeText(this@MainActivity, "เปิดตัวติดตั้ง APK ไม่สำเร็จ", Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+        updateDownloadReceiver = receiver
+        ContextCompat.registerReceiver(
+            this,
+            receiver,
+            IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE),
+            ContextCompat.RECEIVER_NOT_EXPORTED
+        )
+        Toast.makeText(this, "เริ่มดาวน์โหลด DIRECTOR-AI-1.0.apk แล้ว", Toast.LENGTH_LONG).show()
     }
 
     private fun defaultWardrobe(key: String): String = when (key) {
@@ -902,6 +1086,8 @@ Natural realistic human movement, subtle breathing, authentic facial expressions
 
     override fun onDestroy() {
         clockHandler.removeCallbacks(clockTick)
+        updateDownloadReceiver?.let { runCatching { unregisterReceiver(it) } }
+        updateDownloadReceiver = null
         super.onDestroy()
     }
 
