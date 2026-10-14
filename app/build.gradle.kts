@@ -4,7 +4,7 @@ plugins {
 }
 
 android {
-    namespace = "com.pearparinya.automovie"
+    namespace = "com.pearparinya.directorai"
     compileSdk = 35
 
     defaultConfig {

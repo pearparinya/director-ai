@@ -1,4 +1,4 @@
-package com.pearparinya.automovie
+package com.pearparinya.directorai
 
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -97,10 +97,7 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val scroll = ScrollView(this).apply {
-            setBackgroundColor(navy)
-        }
-
+        val scroll = ScrollView(this).apply { setBackgroundColor(navy) }
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(14), dp(42), dp(14), dp(10))
@@ -117,9 +114,7 @@ class MainActivity : AppCompatActivity() {
             setImageResource(R.mipmap.ic_launcher_foreground)
             scaleType = ImageView.ScaleType.FIT_CENTER
             adjustViewBounds = true
-        }, LinearLayout.LayoutParams(dp(72), dp(72)).apply {
-            marginEnd = dp(10)
-        })
+        }, LinearLayout.LayoutParams(dp(72), dp(72)).apply { marginEnd = dp(10) })
 
         val headerText = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -799,7 +794,7 @@ Natural realistic human movement, subtle breathing, authentic facial expressions
                 """
 1. ตั้งค่ารูปตัวละครหลัก (CHARACTER MASTER) ทั้ง 3 คน
 2. กดปุ่ม ❶ เลือกชื่อเรื่อง
-3. กดปุ่ม ❷ แอปจะส่งรูปต้นฉบับ + คำสั่งล็อกหุ่น 9:16 ไปที่แอป Gemini เพื่อสร้างรูปฉากที่ 1 (และคัดลอกคำสั่งไว้ในคลิปบอร์ดให้ด้วย)
+3. กดปุ่ม ❷ แอปจะส่งรูปต้นฉบับ + คำสั่งล็อกหุ่น 9:16 ไปที่แอป Gemini เพื่อสร้างรูปฉากที่ 1
 4. เมื่อโหลดรูปจาก Gemini แล้ว กดปุ่ม ❹ แอปจะคัดลอกคำสั่งวิดีโอ Veo 3.1 ที่ปลอดฟิลเตอร์และเปิดเว็บ Google Flow ให้ทันที
 5. กดปุ่ม ❸ เพื่อทำฉากต่อไปเรื่อยๆ จนครบ 20 ฉาก
                 """.trimIndent()
