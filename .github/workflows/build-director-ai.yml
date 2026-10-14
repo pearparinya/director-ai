@@ -18,11 +18,20 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: '8.7'
+
       - name: Auto-Repair and Inject Auto-Update
         run: |
-          if grep -q "checkForAutoUpdateFromGitHub(isAutoCheck" app/src/main/java/com/pearparinya/directorai/MainActivity.kt; then
-            git checkout 9418667 -- app/src/main/java/com/pearparinya/directorai/MainActivity.kt
-          fi
+          git checkout 9418667 -- app/src/main/AndroidManifest.xml app/src/main/java/com/pearparinya/directorai/MainActivity.kt
 
           python3 - << 'EOF'
           import re
@@ -111,59 +120,3 @@ jobs:
                                                       prefs.edit().putLong("ignored_asset_id", assetId).apply()
                                                   }
                                                   .show()
-                                          }
-                                      }
-                                  }
-                              }
-                          }
-                      }
-                  } catch (e: Exception) {
-                  }
-              }.start()
-          }
-          """
-              kt = kt.rstrip() + "\n" + updater_fn
-              with open(k_path, "w", encoding="utf-8") as f:
-                  f.write(kt)
-          EOF
-
-          if ! git diff --quiet; then
-            git config user.name "github-actions[bot]"
-            git config user.email "github-actions[bot]@users.noreply.github.com"
-            git add app/src/main/AndroidManifest.xml app/src/main/java/com/pearparinya/directorai/MainActivity.kt
-            git commit -m "Auto-repair and inject GitHub Auto-Updater [skip ci]"
-            git push origin HEAD:main || true
-          fi
-
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '17'
-
-      - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v3
-
-      - name: Build Debug APK
-        run: |
-          chmod +x gradlew
-          ./gradlew assembleDebug
-
-      - name: Rename APK
-        run: cp app/build/outputs/apk/debug/app-debug.apk DIRECTOR-AI-1.0.apk
-
-      - name: Upload APK Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: DIRECTOR-AI-1.0
-          path: DIRECTOR-AI-1.0.apk
-
-      - name: Publish to GitHub Releases
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: v1.0
-          name: DIRECTOR AI 1.0 (Build ${{ github.run_number }})
-          files: DIRECTOR-AI-1.0.apk
-          overwrite: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
