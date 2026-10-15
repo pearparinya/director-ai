@@ -33,7 +33,7 @@
         </provider>
 
         <activity
-            android:name=".StudioActivity"
+            android:name=".MainActivity"
             android:screenOrientation="portrait"
             android:launchMode="singleTask"
             android:alwaysRetainTaskState="true"
@@ -45,8 +45,6 @@
             </intent-filter>
 
         </activity>
-
-        <activity android:name=".MainActivity" android:exported="false" android:screenOrientation="portrait" />
     </application>
 
 </manifest>
