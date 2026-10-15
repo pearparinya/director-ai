@@ -112,7 +112,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         headerRow.addView(ImageView(this).apply {
-            setImageResource(R.mipmap.ic_launcher_foreground)
+            setImageResource(R.drawable.app_custom_icon)
             scaleType = ImageView.ScaleType.FIT_CENTER
             adjustViewBounds = true
         }, LinearLayout.LayoutParams(dp(72), dp(72)).apply { marginEnd = dp(10) })
@@ -712,7 +712,7 @@ Natural realistic human movement, subtle breathing, authentic facial expressions
         val uris = arrayListOf<Uri>()
         keys.forEach { key ->
             shareableCharacterMasterFile(key)?.let { file ->
-                uris.add(FileProvider.getUriForFile(this, "${packageName}.fileprovider", file))
+                uris.add(FileProvider.getUriForFile(this, "${BuildConfig.APPLICATION_ID}.fileprovider", file))
             }
         }
         return uris
