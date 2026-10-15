@@ -10,7 +10,7 @@ android {
     defaultConfig {
         applicationId = "com.pearparinya.directorai"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        minSdk = 26
+        minSdk = 24
         targetSdk = 35
         versionCode = 799
         versionName = "1.76"
@@ -29,7 +29,7 @@ android {
         getByName("release") {
             isMinifyEnabled = false
         }
-        getByName("debug") {
+        debug {
             applicationIdSuffix = ".jules"
             manifestPlaceholders["appName"] = "DIRECTOR AI (Jules)"
         }
