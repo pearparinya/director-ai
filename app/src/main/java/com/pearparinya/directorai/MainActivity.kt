@@ -712,7 +712,7 @@ Natural realistic human movement, subtle breathing, authentic facial expressions
         val uris = arrayListOf<Uri>()
         keys.forEach { key ->
             shareableCharacterMasterFile(key)?.let { file ->
-                uris.add(FileProvider.getUriForFile(this, "${BuildConfig.APPLICATION_ID}.fileprovider", file))
+                uris.add(FileProvider.getUriForFile(this, "${packageName}.fileprovider", file))
             }
         }
         return uris
