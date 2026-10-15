@@ -14,6 +14,7 @@ android {
         targetSdk = 35
         versionCode = 799
         versionName = "1.76"
+        manifestPlaceholders["appName"] = "DIRECTOR AI"
     }
 
     sourceSets {
@@ -27,6 +28,10 @@ android {
     buildTypes {
         getByName("release") {
             isMinifyEnabled = false
+        }
+        getByName("debug") {
+            applicationIdSuffix = ".jules"
+            manifestPlaceholders["appName"] = "DIRECTOR AI (Jules)"
         }
     }
 
