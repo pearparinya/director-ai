@@ -96,7 +96,11 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        checkForAutoUpdateFromGitHub(this)
+        try {
+            checkForAutoUpdateFromGitHub(this)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
 
         val scroll = ScrollView(this).apply { setBackgroundColor(navy) }
         val root = LinearLayout(this).apply {
@@ -712,7 +716,7 @@ Natural realistic human movement, subtle breathing, authentic facial expressions
         val uris = arrayListOf<Uri>()
         keys.forEach { key ->
             shareableCharacterMasterFile(key)?.let { file ->
-                uris.add(FileProvider.getUriForFile(this, "${packageName}.fileprovider", file))
+                uris.add(FileProvider.getUriForFile(this, BuildConfig.APPLICATION_ID + ".fileprovider", file))
             }
         }
         return uris
