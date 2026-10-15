@@ -96,7 +96,11 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        checkForAutoUpdateFromGitHub(this)
+        try {
+            checkForAutoUpdateFromGitHub(this)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
 
         val scroll = ScrollView(this).apply { setBackgroundColor(navy) }
         val root = LinearLayout(this).apply {

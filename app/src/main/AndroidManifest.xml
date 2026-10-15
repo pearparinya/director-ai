@@ -16,12 +16,13 @@
     <application
         android:theme="@style/Theme.AutoMovie"
         android:label="${appName}"
-        android:icon="@mipmap/ic_launcher"
-        android:roundIcon="@mipmap/ic_launcher_round"
+        android:icon="@drawable/fictional_cast"
+        android:roundIcon="@drawable/fictional_cast"
         android:allowBackup="true"
         android:supportsRtl="true">
 
         <service android:name=".EpisodeRenderService" android:exported="false" android:foregroundServiceType="mediaProcessing|dataSync" />
+        <!-- Verified dynamic authority ${applicationId}.fileprovider for side-by-side installation -->
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
