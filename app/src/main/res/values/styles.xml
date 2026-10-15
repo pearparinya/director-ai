@@ -1,6 +1,6 @@
 <resources>
 <style name="Theme.AutoMovie" parent="Theme.MaterialComponents.NoActionBar">
-<item name="android:fontFamily">sans</item>
+<item name="android:fontFamily">sans-serif</item>
 <item name="colorPrimary">#FFCC65</item>
 <item name="colorPrimaryVariant">#D79532</item>
 <item name="colorSecondary">#55D5F8</item>
