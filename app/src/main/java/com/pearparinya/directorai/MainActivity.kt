@@ -107,52 +107,22 @@ class MainActivity : AppCompatActivity() {
 
         val headerRow = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.TOP
+            gravity = Gravity.CENTER_HORIZONTAL
             setPadding(0, 0, 0, dp(4))
         }
 
         headerRow.addView(ImageView(this).apply {
-            setImageResource(R.mipmap.ic_launcher_foreground)
+            setImageResource(R.drawable.app_custom_icon)
             scaleType = ImageView.ScaleType.FIT_CENTER
             adjustViewBounds = true
-        }, LinearLayout.LayoutParams(dp(72), dp(72)).apply { marginEnd = dp(10) })
+            clipToOutline = true
+            outlineProvider = object : android.view.ViewOutlineProvider() {
+                override fun getOutline(view: android.view.View, outline: android.graphics.Outline) {
+                    outline.setRoundRect(0, 0, view.width, view.height, dp(16).toFloat())
+                }
+            }
+        }, LinearLayout.LayoutParams(dp(120), dp(120)))
 
-        val headerText = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            gravity = Gravity.START
-        }
-
-        headerText.addView(TextView(this).apply {
-            text = "DIRECTOR AI • GEMINI EDITION"
-            textSize = 18f
-            setTextColor(gold)
-            setTypeface(typeface, Typeface.BOLD)
-            maxLines = 1
-        }, full())
-
-        headerText.addView(TextView(this).apply {
-            text = "ระบบสร้างหนังอัตโนมัติ (Gemini + Google Flow)"
-            textSize = 14f
-            setTextColor(muted)
-            setTypeface(typeface, Typeface.BOLD)
-            maxLines = 1
-        }, full())
-
-        headerText.addView(TextView(this).apply {
-            text = "พัฒนาโดย : นายปริญญา จันทร์จักษุ"
-            textSize = 11f
-            setTextColor(ice)
-            maxLines = 1
-        }, full())
-
-        headerText.addView(TextView(this).apply {
-            text = "VERTICAL 9:16 • SILHOUETTE LOCK • VEO 3.1 ULTRA"
-            textSize = 10f
-            setTextColor(success)
-            maxLines = 1
-        }, full())
-
-        headerRow.addView(headerText, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
         root.addView(headerRow, full())
 
         timeLabel = TextView(this).apply {

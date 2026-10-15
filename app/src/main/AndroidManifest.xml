@@ -16,8 +16,8 @@
     <application
         android:theme="@style/Theme.AutoMovie"
         android:label="${appName}"
-        android:icon="@mipmap/ic_launcher"
-        android:roundIcon="@mipmap/ic_launcher_round"
+        android:icon="@drawable/app_custom_icon"
+        android:roundIcon="@drawable/app_custom_icon"
         android:allowBackup="true"
         android:supportsRtl="true">
 
