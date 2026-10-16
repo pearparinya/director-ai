@@ -925,60 +925,99 @@ Natural realistic human movement, subtle breathing, authentic facial expressions
 fun checkForAutoUpdateFromGitHub(activity: android.app.Activity) {
     Thread {
         try {
-            val apiUrl = "https://api.github.com/repos/pearparinya/director-ai/releases?t=" + System.currentTimeMillis()
+            val apiUrl = "https://api.github.com/repos/pearparinya/director-ai/releases/latest"
             val conn = java.net.URL(apiUrl).openConnection() as java.net.HttpURLConnection
             conn.requestMethod = "GET"
             conn.setRequestProperty("Accept", "application/vnd.github.v3+json")
             conn.setRequestProperty("User-Agent", "DirectorAI-Updater")
+            conn.setRequestProperty("Cache-Control", "no-cache")
             conn.connectTimeout = 10000
             conn.readTimeout = 10000
+
             if (conn.responseCode == 200) {
                 val response = conn.inputStream.bufferedReader().use { it.readText() }
-                val releases = org.json.JSONArray(response)
-                if (releases.length() > 0) {
-                    val latest = releases.getJSONObject(0)
-                    val releaseTitle = latest.optString("name", latest.optString("tag_name", "DIRECTOR AI"))
+                val latest = org.json.JSONObject(response)
+                val releaseTitle = latest.optString("name", latest.optString("tag_name", "DIRECTOR AI"))
+
+                // the tag is format build-X. we want to get X
+                val remoteTag = latest.optString("tag_name", "")
+                val remoteRunNumber = remoteTag.replace("build-", "").replace("v", "")
+
+                val currentVersionName = activity.packageManager.getPackageInfo(activity.packageName, 0).versionName ?: ""
+                val currentRunNumber = currentVersionName.substringAfterLast(".")
+
+                if (remoteRunNumber.isNotEmpty() && remoteRunNumber != currentRunNumber) {
                     val assets = latest.optJSONArray("assets")
                     var downloadUrl = ""
-                    var updatedAt = ""
                     var assetId = 0L
+                    var apkName = "DIRECTOR-AI-update.apk"
+
                     if (assets != null) {
                         for (i in 0 until assets.length()) {
                             val a = assets.getJSONObject(i)
                             if (a.optString("name", "").endsWith(".apk", ignoreCase = true)) {
                                 downloadUrl = a.optString("browser_download_url", "")
-                                updatedAt = a.optString("updated_at", "")
                                 assetId = a.optLong("id", 0L)
+                                apkName = a.optString("name", "DIRECTOR-AI-update.apk")
                                 break
                             }
                         }
                     }
-                    if (downloadUrl.isNotEmpty() && updatedAt.isNotEmpty()) {
-                        val sdf = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", java.util.Locale.US)
-                        sdf.timeZone = java.util.TimeZone.getTimeZone("UTC")
-                        val remoteTime = sdf.parse(updatedAt)?.time ?: 0L
-                        val localTime = activity.packageManager.getPackageInfo(activity.packageName, 0).lastUpdateTime
+
+                    if (downloadUrl.isNotEmpty()) {
                         val prefs = activity.getSharedPreferences("DirectorAIAutoUpdate", android.content.Context.MODE_PRIVATE)
                         val ignoredId = prefs.getLong("ignored_asset_id", -1L)
-                        if (remoteTime > (localTime + 30000L) && assetId != ignoredId) {
+
+                        // We check version strings. For simplicity, just checking if not equal is usually enough for a run number
+                        // But to avoid downgrades if tag format differs, we can just say any different string means an update if it wasn't ignored.
+                        if (assetId != ignoredId) {
                             android.os.Handler(android.os.Looper.getMainLooper()).post {
                                 if (!activity.isFinishing) {
                                     android.app.AlertDialog.Builder(activity)
                                         .setTitle("🚀 พบอัปเดตใหม่: " + releaseTitle)
-                                        .setMessage("ตรวจพบการแก้ไขโค้ดและบิลด์ APK เวอร์ชันใหม่บน GitHub กดอัปเดตเลยเพื่อดาวน์โหลดและติดตั้งทับได้ทันที")
+                                        .setMessage("มีอัปเดตเวอร์ชันใหม่พร้อมใช้งาน ($remoteRunNumber) \nกดอัปเดตเลยเพื่อดาวน์โหลดและติดตั้งทับได้ทันที")
                                         .setCancelable(false)
                                         .setPositiveButton("⬇️ อัปเดตเลย") { _, _ ->
                                             try {
                                                 val uri = android.net.Uri.parse(downloadUrl)
                                                 val req = android.app.DownloadManager.Request(uri)
                                                 req.setTitle("กำลังอัปเดต Director AI")
-                                                req.setDescription("กำลังดาวน์โหลด DIRECTOR-AI-1.0.apk...")
+                                                req.setDescription("กำลังดาวน์โหลด $apkName...")
                                                 req.setNotificationVisibility(android.app.DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
-                                                req.setDestinationInExternalPublicDir(android.os.Environment.DIRECTORY_DOWNLOADS, "DIRECTOR-AI-1.0.apk")
+                                                req.setDestinationInExternalPublicDir(android.os.Environment.DIRECTORY_DOWNLOADS, apkName)
+
                                                 val dm = activity.getSystemService(android.content.Context.DOWNLOAD_SERVICE) as android.app.DownloadManager
-                                                dm.enqueue(req)
-                                                activity.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, uri))
+                                                val downloadId = dm.enqueue(req)
+
+                                                val onComplete = object : android.content.BroadcastReceiver() {
+                                                    override fun onReceive(ctxt: android.content.Context, intent: android.content.Intent) {
+                                                        val id = intent.getLongExtra(android.app.DownloadManager.EXTRA_DOWNLOAD_ID, -1)
+                                                        if (id == downloadId) {
+                                                            try {
+                                                                val downloadUri = dm.getUriForDownloadedFile(downloadId)
+                                                                if (downloadUri != null) {
+                                                                    val installIntent = android.content.Intent(android.content.Intent.ACTION_VIEW)
+                                                                    installIntent.setDataAndType(downloadUri, "application/vnd.android.package-archive")
+                                                                    installIntent.flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
+                                                                    ctxt.startActivity(installIntent)
+                                                                }
+                                                            } catch (e: Exception) {
+                                                                e.printStackTrace()
+                                                            }
+                                                            ctxt.unregisterReceiver(this)
+                                                        }
+                                                    }
+                                                }
+                                                // Register receiver
+                                                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                                                    activity.registerReceiver(onComplete, android.content.IntentFilter(android.app.DownloadManager.ACTION_DOWNLOAD_COMPLETE), android.content.Context.RECEIVER_EXPORTED)
+                                                } else {
+                                                    activity.registerReceiver(onComplete, android.content.IntentFilter(android.app.DownloadManager.ACTION_DOWNLOAD_COMPLETE))
+                                                }
+
+                                                android.widget.Toast.makeText(activity, "กำลังดาวน์โหลดไฟล์อัปเดต...", android.widget.Toast.LENGTH_SHORT).show()
                                             } catch (e: Exception) {
+                                                e.printStackTrace()
                                             }
                                         }
                                         .setNeutralButton("ไว้ทีหลัง") { _, _ ->
@@ -992,6 +1031,7 @@ fun checkForAutoUpdateFromGitHub(activity: android.app.Activity) {
                 }
             }
         } catch (e: Exception) {
+            e.printStackTrace()
         }
     }.start()
 }

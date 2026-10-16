@@ -7,13 +7,21 @@ android {
     namespace = "com.pearparinya.directorai"
     compileSdk = 35
 
+    buildFeatures {
+        buildConfig = true
+    }
+
     defaultConfig {
         applicationId = "com.pearparinya.directorai"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         minSdk = 26
         targetSdk = 35
-        versionCode = 799
-        versionName = "1.76"
+
+        // Dynamically increment using GitHub Run Number
+        val runNum = System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull() ?: 1
+        versionCode = 799 + runNum
+        versionName = "1.76.$runNum"
+
         manifestPlaceholders["appName"] = "DIRECTOR AI"
     }
 
