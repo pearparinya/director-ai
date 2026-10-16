@@ -17,6 +17,10 @@ android {
         manifestPlaceholders["appName"] = "DIRECTOR AI"
     }
 
+    buildFeatures {
+        buildConfig = true
+    }
+
     sourceSets {
         getByName("main") {
             manifest.srcFile("src/main/AndroidManifest.xml")
@@ -30,7 +34,6 @@ android {
             isMinifyEnabled = false
         }
         getByName("debug") {
-            applicationIdSuffix = ".jules"
             manifestPlaceholders["appName"] = "DIRECTOR AI (Jules)"
         }
     }

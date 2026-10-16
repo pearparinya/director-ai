@@ -1,0 +1,5 @@
+gradle-8.9-bin.zip
+gradle-8.9/
+app/build/
+.gradle/
+local.properties
