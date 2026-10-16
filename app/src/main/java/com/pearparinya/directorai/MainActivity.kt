@@ -10,6 +10,7 @@ import android.media.AudioManager
 import android.media.ToneGenerator
 import android.net.Uri
 import android.os.Bundle
+import com.pearparinya.directorai.R
 import android.os.Handler
 import android.os.Looper
 import android.view.Gravity
@@ -66,9 +67,24 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private val navy = Color.rgb(12, 15, 38)
+    private val navy = Color.parseColor("#0B0C1E")
+    private val navyLight = Color.parseColor("#121024")
+    private val headerBg = Color.parseColor("#1E1424")
+    private val headerStroke = Color.parseColor("#8A6D3B")
+    private val pillBg = Color.parseColor("#DCE4EC")
+    private val pillText = Color.parseColor("#E5A93C")
+    private val stepActive = Color.parseColor("#0088FF")
+    private val stepInactive = Color.parseColor("#3A3F58")
+    private val card1Bg = Color.parseColor("#122244")
+    private val card1Border = Color.parseColor("#00A8FF")
+    private val cardOtherBg = Color.parseColor("#181C26")
+    private val gridBg = Color.parseColor("#14161F")
+    private val gridBorder = Color.parseColor("#2E3446")
+    private val gridTextGold = Color.parseColor("#F5B041")
+    private val footerText = Color.parseColor("#9AA4B2")
+    private val popupBg = Color.parseColor("#111526")
     private val panel = Color.rgb(37, 32, 78)
-    private val gold = Color.rgb(255, 190, 74)
+    private val gold = Color.parseColor("#F5B041")
     private val ice = Color.rgb(248, 247, 255)
     private val muted = Color.rgb(196, 193, 222)
     private val success = Color.rgb(83, 224, 210)
@@ -98,24 +114,51 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         checkForAutoUpdateFromGitHub(this)
 
-        val scroll = ScrollView(this).apply { setBackgroundColor(navy) }
+        val scroll = ScrollView(this).apply {
+            setBackgroundColor(navy)
+            isSmoothScrollingEnabled = true
+        }
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(14), dp(42), dp(14), dp(10))
-            setBackgroundColor(navy)
+            val bgDrawable = android.graphics.drawable.GradientDrawable(
+                android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM,
+                intArrayOf(navy, navyLight)
+            )
+            background = bgDrawable
         }
 
-        val headerRow = LinearLayout(this).apply {
+        val headerCard = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.TOP
-            setPadding(0, 0, 0, dp(4))
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(16), dp(16), dp(16), dp(16))
+            val bgDrawable = android.graphics.drawable.GradientDrawable()
+            bgDrawable.setColor(headerBg)
+            bgDrawable.cornerRadius = dp(20).toFloat()
+            bgDrawable.setStroke(dp(1), headerStroke)
+            background = bgDrawable
         }
 
-        headerRow.addView(ImageView(this).apply {
+        val iconContainer = LinearLayout(this).apply {
+            val bgDrawable = android.graphics.drawable.GradientDrawable()
+            bgDrawable.cornerRadius = dp(20).toFloat() // corners rounded
+            bgDrawable.setStroke(dp(2), gold) // gold stroke 2dp
+            background = bgDrawable
+            setPadding(dp(2), dp(2), dp(2), dp(2))
+        }
+
+        iconContainer.addView(ImageView(this).apply {
             setImageResource(R.mipmap.ic_launcher_foreground)
-            scaleType = ImageView.ScaleType.FIT_CENTER
-            adjustViewBounds = true
-        }, LinearLayout.LayoutParams(dp(72), dp(72)).apply { marginEnd = dp(10) })
+            scaleType = ImageView.ScaleType.CENTER_CROP
+            clipToOutline = true
+            outlineProvider = object : android.view.ViewOutlineProvider() {
+                override fun getOutline(view: android.view.View, outline: android.graphics.Outline) {
+                    outline.setRoundRect(0, 0, view.width, view.height, dp(18).toFloat())
+                }
+            }
+        }, LinearLayout.LayoutParams(dp(80), dp(80)))
+
+        headerCard.addView(iconContainer, LinearLayout.LayoutParams(dp(84), dp(84)).apply { marginEnd = dp(16) })
 
         val headerText = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -123,98 +166,81 @@ class MainActivity : AppCompatActivity() {
         }
 
         headerText.addView(TextView(this).apply {
-            text = "DIRECTOR AI • GEMINI EDITION"
+            text = "DIRECTOR AI • GEMINI"
+            textSize = 20f
+            setTextColor(gold)
+            setTypeface(typeface, Typeface.BOLD)
+            maxLines = 1
+        }, full())
+
+        headerText.addView(TextView(this).apply {
+            text = "ผู้กำกับอัจฉริยะ"
             textSize = 18f
-            setTextColor(gold)
+            setTextColor(Color.WHITE)
             setTypeface(typeface, Typeface.BOLD)
             maxLines = 1
         }, full())
 
         headerText.addView(TextView(this).apply {
-            text = "ระบบสร้างหนังอัตโนมัติ (Gemini + Google Flow)"
+            text = "พร้อมใช้ใน Gemini & Flow"
             textSize = 14f
-            setTextColor(muted)
-            setTypeface(typeface, Typeface.BOLD)
+            setTextColor(Color.parseColor("#A0AAB8"))
             maxLines = 1
         }, full())
 
-        headerText.addView(TextView(this).apply {
-            text = "พัฒนาโดย : นายปริญญา จันทร์จักษุ"
-            textSize = 11f
-            setTextColor(ice)
-            maxLines = 1
-        }, full())
+        headerCard.addView(headerText, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+        root.addView(headerCard, full().apply { setMargins(0, 0, 0, dp(16)) })
 
-        headerText.addView(TextView(this).apply {
-            text = "VERTICAL 9:16 • SILHOUETTE LOCK • VEO 3.1 ULTRA"
-            textSize = 10f
-            setTextColor(success)
-            maxLines = 1
-        }, full())
-
-        headerRow.addView(headerText, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
-        root.addView(headerRow, full())
-
-        timeLabel = TextView(this).apply {
-            textSize = 11f
-            setTextColor(muted)
+        // Let's keep the sound button logic but maybe put it elsewhere or keep it for now.
+        // Actually, we can move the sound button to a corner or keep it in the footer.
+        // Let's create the status pill.
+        val statusPill = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
-            setPadding(dp(8), dp(2), dp(8), dp(4))
+            setPadding(dp(16), dp(8), dp(16), dp(8))
+            val bgDrawable = android.graphics.drawable.GradientDrawable()
+            bgDrawable.setColor(pillBg)
+            bgDrawable.cornerRadius = dp(24).toFloat()
+            background = bgDrawable
         }
-        val timeRow = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-        }
-        timeRow.addView(timeLabel, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
-
-        val soundButton = TextView(this).apply {
-            textSize = 16f
-            gravity = Gravity.CENTER
-            setTextColor(gold)
-            text = if (statePrefs.getBoolean("soundEnabled", true)) "🔊" else "🔇"
-            setOnClickListener {
-                soundEnabled = !soundEnabled
-                text = if (soundEnabled) "🔊" else "🔇"
-                statePrefs.edit().putBoolean("soundEnabled", soundEnabled).apply()
-                if (soundEnabled) playTone(ToneGenerator.TONE_PROP_BEEP, 70)
-            }
-        }
-        timeRow.addView(soundButton, LinearLayout.LayoutParams(dp(42), dp(32)))
-        root.addView(timeRow, full())
-        startClock()
 
         sceneLabel = TextView(this).apply {
-            text = "EP 01   •   SCENE 01 / 20   •   9:16 (8 SEC)"
-            textSize = 16f
-            setTextColor(ice)
+            text = "🎬 พร้อมสร้างเรื่องใหม่ • EP 01 (SCENE 01/20)"
+            textSize = 14f
+            setTextColor(Color.parseColor("#14161F")) // dark color
             setTypeface(typeface, Typeface.BOLD)
             gravity = Gravity.CENTER
-            setPadding(dp(10), dp(6), dp(10), dp(6))
-            setBackgroundColor(panel)
         }
-        root.addView(sceneLabel, full())
+        statusPill.addView(sceneLabel, full())
 
+        status = TextView(this).apply {
+            text = "ขั้นตอน 1 • เลือกเรื่องแล้วส่งไป Gemini"
+            textSize = 13f
+            setTextColor(pillText)
+            setTypeface(typeface, Typeface.BOLD)
+            gravity = Gravity.CENTER
+        }
+        statusPill.addView(status, full())
+
+        root.addView(statusPill, full().apply { setMargins(0, 0, 0, dp(24)) })
+
+        // Progress bar hidden or modified, let's just keep it hidden since timeline replaces it visually
         progress = ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply {
             max = 20
             progress = 1
+            visibility = android.view.View.GONE
         }
         root.addView(progress, full(dp(7)))
 
+        timeLabel = TextView(this) // Dummy
+        startClock()
+
+
         input = EditText(this).apply {
             hint = "ชื่อเรื่อง / คำสั่งผู้กำกับ…"
-            setHintTextColor(Color.GRAY)
-            setTextColor(Color.WHITE)
-            minLines = 1
-            maxLines = 2
-            setPadding(dp(14), dp(8), dp(14), dp(8))
-            setBackgroundColor(panel)
+            visibility = android.view.View.GONE
         }
-        root.addView(input, full().apply { setMargins(0, dp(5), 0, dp(5)) })
-
-        root.addView(
-            stepAction(1, "❶ ✨ สร้างเรื่องใหม่ • NEW STORY", "เลือกชื่อเรื่องและหมวดละคร") { generateTitles() },
-            full()
-        )
+        root.addView(input)
 
         titlePanel = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -224,88 +250,155 @@ class MainActivity : AppCompatActivity() {
         }
         root.addView(titlePanel, full())
 
-        characterMasterButton = Button(this).apply {
-            textSize = 12f
-            setTextColor(Color.BLACK)
-            setTypeface(typeface, Typeface.BOLD)
-            backgroundTintList = android.content.res.ColorStateList.valueOf(gold)
-            setOnClickListener { showCharacterMasterSetup() }
+        characterMasterButton = Button(this).apply { visibility = android.view.View.GONE }
+        nextHint = TextView(this)
+
+        val timelineLayout = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
         }
-        root.addView(characterMasterButton, full(dp(40)))
-        refreshCharacterMasterButton()
 
-        root.addView(section("⚡ GEMINI IMAGE 9:16 + GOOGLE FLOW VIDEO").apply { gravity = Gravity.CENTER })
+        fun createStep(num: Int, status: String, title: String, desc: String, bgC: Int, borderC: Int?, onClick: () -> Unit): LinearLayout {
+            val stepRow = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                setPadding(0, 0, 0, dp(16))
+            }
 
-        nextHint = TextView(this).apply {
-            textSize = 11f
-            setTextColor(muted)
-            gravity = Gravity.CENTER
-            setPadding(0, 0, 0, dp(4))
-        }
-        root.addView(nextHint, full())
+            val leftCol = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                gravity = Gravity.CENTER_HORIZONTAL
+            }
 
-        root.addView(
-            stepAction(2, "❷ 🎬 ส่ง Gemini สร้างโครงเรื่อง + รูปฉาก 01", "แนบ Master + ล็อกหุ่น + สร้างภาพ 9:16 ใน Gemini") { startQuickStory() },
-            full()
-        )
-
-        root.addView(
-            stepAction(3, "❸ ➜ ส่ง Gemini สร้างรูปฉากถัดไป • NEXT SCENE", "เปลี่ยนชุด/ฉากตามเนื้อเรื่อง คงหน้าและหุ่นเดิม 9:16") { generateNextQuickScene() },
-            full()
-        )
-
-        root.addView(
-            Button(this).apply {
-                text = "❹ 🎥 คัดลอกคำสั่งวิดีโอ + เปิด GOOGLE FLOW"
+            val circle = TextView(this).apply {
+                text = num.toString()
+                setTextColor(Color.WHITE)
                 textSize = 14f
+                setTypeface(typeface, Typeface.BOLD)
+                gravity = Gravity.CENTER
+                val bg = android.graphics.drawable.GradientDrawable()
+                bg.shape = android.graphics.drawable.GradientDrawable.OVAL
+                bg.setColor(if (num == 1) stepActive else stepInactive)
+                background = bg
+            }
+            leftCol.addView(circle, LinearLayout.LayoutParams(dp(28), dp(28)))
+
+            if (num < 4) {
+                val line = android.view.View(this).apply {
+                    setBackgroundColor(if (num == 1) stepActive else stepInactive)
+                }
+                leftCol.addView(line, LinearLayout.LayoutParams(dp(2), LinearLayout.LayoutParams.MATCH_PARENT).apply { setMargins(0, dp(4), 0, dp(4)) })
+            }
+
+            stepRow.addView(leftCol, LinearLayout.LayoutParams(dp(40), LinearLayout.LayoutParams.MATCH_PARENT))
+
+            val card = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding(dp(16), dp(12), dp(16), dp(12))
+                val bg = android.graphics.drawable.GradientDrawable()
+                bg.setColor(bgC)
+                bg.cornerRadius = dp(18).toFloat()
+                if (borderC != null) bg.setStroke(dp(1), borderC)
+                background = bg
+                setOnClickListener { onClick() }
+            }
+
+            card.addView(TextView(this).apply {
+                text = status
+                textSize = 11f
+                setTextColor(if (num == 1 || num == 2) success else muted)
+                setTypeface(typeface, Typeface.BOLD)
+            })
+
+            card.addView(TextView(this).apply {
+                text = title
+                textSize = 15f
+                setTextColor(Color.WHITE)
+                setTypeface(typeface, Typeface.BOLD)
+                setPadding(0, dp(4), 0, dp(4))
+            })
+
+            card.addView(TextView(this).apply {
+                text = desc
+                textSize = 12f
+                setTextColor(muted)
+            })
+
+            stepRow.addView(card, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+            return stepRow
+        }
+
+        timelineLayout.addView(createStep(1, "ขั้นตอน 1 • พร้อมใช้งาน", "สร้างเรื่องและส่งไป Gemini ›", "ตรวจ MASTER → เลือกช่องและแนว → ส่งคำสั่งไป Gemini", card1Bg, card1Border) {
+            showChannelPopup()
+        })
+
+        timelineLayout.addView(createStep(2, "ขั้นตอน 2 • พร้อมใช้งาน", "ส่ง Gemini สร้างโครงเรื่อง + รูปฉาก 01 ›", "สร้างโครงเรื่องอัตโนมัติ → สร้างภาพเปิดฉากแรก 9:16", cardOtherBg, null) {
+            startQuickStory()
+        })
+
+        timelineLayout.addView(createStep(3, "ขั้นตอน 3 • ล็อก • รอขั้นตอนก่อนหน้า", "สร้างรูปฉากถัดไป • NEXT SCENE 🔒", "ส่ง Gemini สร้างภาพต่อเนื่องรายฉากจนครบตอน", cardOtherBg, null) {
+            generateNextQuickScene()
+        })
+
+        timelineLayout.addView(createStep(4, "ขั้นตอน 4 • ล็อก • รอขั้นตอนก่อนหน้า", "คัดลอกคำสั่งวิดีโอ + เปิด Flow / Veo 🔒", "ใช้ภาพและคำสั่งสร้างคลิปใน Google Flow", cardOtherBg, null) {
+            openGoogleFlowWithPrompt()
+        })
+
+        root.addView(timelineLayout, full())
+
+        // Grid 2x3
+        val grid = GridLayout(this).apply {
+            columnCount = 2
+            rowCount = 3
+            useDefaultMargins = true
+            setPadding(dp(8), dp(8), dp(8), dp(8))
+            val bg = android.graphics.drawable.GradientDrawable()
+            bg.setColor(gridBg)
+            bg.cornerRadius = dp(16).toFloat()
+            bg.setStroke(dp(1), gridBorder)
+            background = bg
+        }
+
+        fun gridBtn(textStr: String, action: () -> Unit): Button {
+            return Button(this).apply {
+                text = textStr
+                textSize = 14f
+                setTextColor(gridTextGold)
+                setTypeface(typeface, Typeface.BOLD)
+                setBackgroundColor(Color.TRANSPARENT)
                 isAllCaps = false
-                setTextColor(Color.WHITE)
-                setTypeface(typeface, Typeface.BOLD)
-                backgroundTintList = android.content.res.ColorStateList.valueOf(flowBlue)
-                setOnClickListener { openGoogleFlowWithPrompt() }
-            },
-            full(dp(44)).apply { setMargins(0, dp(4), 0, dp(4)) }
-        )
-
-        status = TextView(this).apply {
-            text = "● พร้อมใช้งาน • ขับเคลื่อนด้วย Gemini & Google Flow"
-            textSize = 11f
-            setTextColor(success)
-            gravity = Gravity.CENTER
-            setPadding(0, dp(6), 0, dp(6))
-        }
-        root.addView(status, full())
-
-        val utilityRow = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER
+                gravity = Gravity.CENTER
+                setOnClickListener { action() }
+            }
         }
 
-        utilityRow.addView(
-            Button(this).apply {
-                text = "❓ วิธีใช้งาน"
-                textSize = 13f
-                setTextColor(Color.BLACK)
-                setTypeface(typeface, Typeface.BOLD)
-                backgroundTintList = android.content.res.ColorStateList.valueOf(gold)
-                setOnClickListener { showHelp() }
-            },
-            LinearLayout.LayoutParams(0, dp(44), 1f).apply { marginEnd = dp(4) }
-        )
+        val param = { GridLayout.LayoutParams(GridLayout.spec(GridLayout.UNDEFINED, 1f), GridLayout.spec(GridLayout.UNDEFINED, 1f)) }
 
-        utilityRow.addView(
-            Button(this).apply {
-                text = "🔄 เริ่มเรื่องใหม่"
-                textSize = 13f
-                setTextColor(Color.WHITE)
-                setTypeface(typeface, Typeface.BOLD)
-                backgroundTintList = android.content.res.ColorStateList.valueOf(Color.rgb(210, 55, 55))
-                setOnClickListener { confirmNewStory() }
-            },
-            LinearLayout.LayoutParams(0, dp(44), 1f).apply { marginStart = dp(4) }
-        )
+        grid.addView(gridBtn("⚙️ ตั้งค่า / วิธีใช้งาน") { showHelp() }, param())
+        grid.addView(gridBtn("✨ เริ่มเรื่องใหม่") { showChannelPopup() }, param())
+        grid.addView(gridBtn("🎭 คลังตัวละคร / MASTER") { showCharacterMasterSetup() }, param())
+        grid.addView(gridBtn("🖼️ ทดลองสร้างรูป") { generateNextQuickScene() }, param())
+        grid.addView(gridBtn("📚 เรื่องของฉัน") { Toast.makeText(this@MainActivity, "เรื่องปัจจุบัน: ${selectedCategory ?: "ยังไม่เลือก"}", Toast.LENGTH_SHORT).show() }, param())
+        grid.addView(gridBtn("🏠 หน้าหลัก") { scroll.smoothScrollTo(0, 0) }, param())
 
-        root.addView(utilityRow, full())
+        root.addView(grid, full().apply { setMargins(0, dp(16), 0, dp(24)) })
+
+        // Footer Text
+        val footer = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER
+        }
+        footer.addView(TextView(this).apply {
+            text = "Flow • Veo 3.1 Lite • 8 วินาที • 9:16"
+            textSize = 12f
+            setTextColor(footerText)
+            gravity = Gravity.CENTER
+        })
+        footer.addView(TextView(this).apply {
+            text = "พัฒนาโดย : นายปริญญา จันทร์จักษุ"
+            textSize = 12f
+            setTextColor(footerText)
+            gravity = Gravity.CENTER
+        })
+        root.addView(footer, full())
 
         scroll.addView(root)
         restoreWorkState()
@@ -804,8 +897,133 @@ Natural realistic human movement, subtle breathing, authentic facial expressions
             .show()
     }
 
+        private fun showChannelPopup() {
+        val dialogView = ScrollView(this).apply {
+            setBackgroundColor(popupBg)
+            val pad = dp(20)
+            setPadding(pad, pad, pad, pad)
+        }
+
+        val contentLayout = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+        }
+
+        // Title
+        contentLayout.addView(TextView(this).apply {
+            text = "🎬 เลือกช่องสร้างหนัง"
+            textSize = 20f
+            setTextColor(gold)
+            setTypeface(typeface, Typeface.BOLD)
+            gravity = Gravity.CENTER
+        }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { bottomMargin = dp(16) })
+
+        // Button Check Master
+        val btnCheckMaster = Button(this).apply {
+            text = "🎭 ตรวจ / เปลี่ยน MASTER ก่อนสร้างเรื่อง"
+            textSize = 14f
+            setTextColor(Color.WHITE)
+            setTypeface(typeface, Typeface.BOLD)
+            backgroundTintList = android.content.res.ColorStateList.valueOf(Color.parseColor("#3A3F58")) // Gray
+            setOnClickListener { showCharacterMasterSetup() }
+        }
+        contentLayout.addView(btnCheckMaster, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { bottomMargin = dp(8) })
+
+        // Subtitle
+        contentLayout.addView(TextView(this).apply {
+            text = "ตรวจภาพต้นฉบับก่อนส่ง • เลือกช่องด้านล่างเมื่อพร้อม"
+            textSize = 12f
+            setTextColor(Color.parseColor("#A0AAB8"))
+            gravity = Gravity.CENTER
+        }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { bottomMargin = dp(16) })
+
+        // Function to create channel card
+        fun createChannelCard(imgRes: Int, text1: String, text2: String, color: Int, onClick: () -> Unit): LinearLayout {
+            val card = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                val bg = android.graphics.drawable.GradientDrawable()
+                bg.setColor(Color.parseColor("#1E1424"))
+                bg.cornerRadius = dp(16).toFloat()
+                background = bg
+                clipToOutline = true
+                setOnClickListener { onClick() }
+            }
+
+            val img = ImageView(this).apply {
+                setImageResource(imgRes)
+                scaleType = ImageView.ScaleType.CENTER_CROP
+            }
+            card.addView(img, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(120)))
+
+            val bottomBar = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                setBackgroundColor(color)
+                setPadding(dp(12), dp(12), dp(12), dp(12))
+            }
+
+            bottomBar.addView(TextView(this).apply {
+                text = text1
+                textSize = 16f
+                setTextColor(Color.BLACK)
+                setTypeface(typeface, Typeface.BOLD)
+            })
+
+            bottomBar.addView(TextView(this).apply {
+                text = text2
+                textSize = 14f
+                setTextColor(Color.BLACK)
+                setTypeface(typeface, Typeface.BOLD)
+            })
+
+            card.addView(bottomBar, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT))
+            return card
+        }
+
+        val dialog = AlertDialog.Builder(this)
+            .setView(dialogView)
+            .create()
+
+        dialog.window?.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(Color.TRANSPARENT))
+
+        // Card 1
+        val card1 = createChannelCard(R.drawable.banner_channel_drama, "🎬 สตอรี่หลังบ้าน", "ซีรีส์สั้นดราม่าผัวเมีย", Color.parseColor("#FFB703")) {
+            dialog.dismiss()
+            input.setText("ซีรีส์สั้นดราม่าผัวเมีย") // Pre-fill or trigger logic
+            categoryIndex = 0 // Fix category index to Drama or similar logic if needed, but generateTitles will ask for category anyway
+            generateTitles()
+        }
+        contentLayout.addView(card1, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { bottomMargin = dp(16) })
+
+        // Card 2
+        val card2 = createChannelCard(R.drawable.banner_channel_all_genres, "🎬 ระบบกำกับละครอัจฉริยะ", "สร้างละครครบทุกแนว", Color.parseColor("#12C2E9")) {
+            dialog.dismiss()
+            input.setText("สร้างละครครบทุกแนว")
+            generateTitles()
+        }
+        contentLayout.addView(card2, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { bottomMargin = dp(16) })
+
+        // Cancel Button
+        val btnCancel = Button(this).apply {
+            text = "ยกเลิก"
+            textSize = 14f
+            setTextColor(Color.WHITE)
+            setBackgroundColor(Color.TRANSPARENT)
+            setOnClickListener { dialog.dismiss() }
+        }
+        contentLayout.addView(btnCancel, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT))
+
+        dialogView.addView(contentLayout)
+
+        // Show with rounded background
+        val bgDrawable = android.graphics.drawable.GradientDrawable()
+        bgDrawable.setColor(popupBg)
+        bgDrawable.cornerRadius = dp(24).toFloat()
+        dialogView.background = bgDrawable
+
+        dialog.show()
+    }
+
     private fun updateUi() {
-        sceneLabel.text = "EP ${fmt(currentEp)}   •   SCENE ${fmt(currentScene)} / 20   •   9:16 (8 SEC)"
+        sceneLabel.text = "🎬 สร้างเรื่อง • EP ${fmt(currentEp)} (SCENE ${fmt(currentScene)}/20)"
         progress.progress = currentScene
         refreshStepIndicator()
     }
@@ -817,16 +1035,12 @@ Natural realistic human movement, subtle breathing, authentic facial expressions
     }
 
     private fun refreshStepIndicator() {
-        stepButtons.forEach { (step, button) ->
-            val active = step == activeStep
-            button.backgroundTintList = android.content.res.ColorStateList.valueOf(if (active) activeGreen else panel)
-            button.setTextColor(if (active) Color.BLACK else ice)
-        }
-        if (::nextHint.isInitialized) {
-            nextHint.text = when (activeStep) {
-                1 -> "ขั้นตอน ① กดเลือกชื่อเรื่อง"
-                2 -> "ขั้นตอน ② กดส่งให้ Gemini สร้างรูปฉาก 01 (ขนาด 9:16)"
-                else -> "ขั้นตอน ③ สร้างรูปฉากถัดไปใน Gemini หรือกด ❹ ส่งเข้า Google Flow"
+        if (::status.isInitialized) {
+            status.text = when(activeStep) {
+                1 -> "ขั้นตอน 1 • เลือกเรื่องแล้วส่งไป Gemini"
+                2 -> "ขั้นตอน 2 • ส่งโครงเรื่องให้ Gemini"
+                3 -> "ขั้นตอน 3 • สร้างฉากถัดไปเรื่อยๆ"
+                else -> "ขั้นตอน 4 • ส่งเข้า Google Flow"
             }
         }
     }
