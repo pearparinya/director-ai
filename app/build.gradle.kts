@@ -4,6 +4,10 @@ plugins {
 }
 
 android {
+    buildFeatures {
+        buildConfig = true
+    }
+
     namespace = "com.pearparinya.directorai"
     compileSdk = 35
 
